@@ -155,10 +155,11 @@
         <div class="info-panel">
             <h3>Filter Guide</h3>
             <p><strong>Grayscale:</strong> Black & white</p>
-            <p><strong>Invert:</strong> Color negative</p>
+            <p><strong>Sharpen:</strong> Edge enhancement</p>
             <p><strong>Blur:</strong> Gaussian blur</p>
             <p><strong>Edge:</strong> Sobel edge detection</p>
             <p><strong>Flip H/V:</strong> Mirror image</p>
+            <p><strong>Twist:</strong> Distortion effect</p>
             <p><strong>Reset:</strong> Restore original</p>
         </div>
         
@@ -173,11 +174,12 @@
             <button class="upload-btn" onclick="document.getElementById('file-input').click()">Upload Image</button>
             <div class="filter-buttons">
                 <button onclick="applyFilter('grayscale')">Grayscale</button>
-                <button onclick="applyFilter('invert')">Invert</button>
+                <button onclick="applyFilter('sharpen')">Sharpen</button>
                 <button onclick="applyFilter('blur')">Blur</button>
                 <button onclick="applyFilter('edge')">Edge</button>
                 <button onclick="applyFilter('flip-h')">Flip H</button>
                 <button onclick="applyFilter('flip-v')">Flip V</button>
+                <button onclick="applyFilter('twist')">Twist</button>
                 <button onclick="applyFilter('original')" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">Reset</button>
             </div>
             <button class="save-btn" onclick="saveImage()">Save Image</button>
@@ -332,9 +334,17 @@
                             float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114)); 
                             gl_FragColor = vec4(gray, gray, gray, 1.0); 
                         }
-                        // Invert (Color negative)
+                        // Sharpen (Edge enhancement)
                         else if (uFilterType == 2) { 
-                            gl_FragColor = vec4(1.0 - color.rgb, 1.0); 
+                            float offset = 0.002;
+                            vec4 center = texture2D(uTexture, uv);
+                            vec4 right = texture2D(uTexture, uv + vec2(offset, 0.0));
+                            vec4 left = texture2D(uTexture, uv + vec2(-offset, 0.0));
+                            vec4 top = texture2D(uTexture, uv + vec2(0.0, offset));
+                            vec4 bottom = texture2D(uTexture, uv + vec2(0.0, -offset));
+                            
+                            vec4 laplacian = (right + left + top + bottom - 4.0 * center);
+                            gl_FragColor = center - laplacian * 1.5;
                         }
                         // Blur
                         else if (uFilterType == 4) { 
@@ -376,8 +386,21 @@
                         else if (uFilterType == 7) { 
                             gl_FragColor = texture2D(uTexture, vec2(uv.x, 1.0 - uv.y)); 
                         }
+                        // Twist (Distortion effect)
+                        else if (uFilterType == 9) {
+                            vec2 centered = uv - 0.5;
+                            float dist = length(centered);
+                            float angle = dist * 8.0;
+                            float s = sin(angle);
+                            float c = cos(angle);
+                            vec2 twisted = vec2(
+                                centered.x * c - centered.y * s,
+                                centered.x * s + centered.y * c
+                            );
+                            gl_FragColor = texture2D(uTexture, 0.5 + twisted);
+                        }
                         // Original / Reset
-                        else if (uFilterType == 8) {
+                        else if (uFilterType == 10) {
                             gl_FragColor = color;
                         }
                         // Default
@@ -457,7 +480,7 @@
         };
 
         window.applyFilter = function(filterType) {
-            const map = { 'grayscale': 1, 'invert': 2, 'blur': 4, 'edge': 5, 'flip-h': 6, 'flip-v': 7, 'original': 8 };
+            const map = { 'grayscale': 1, 'sharpen': 2, 'blur': 4, 'edge': 5, 'flip-h': 6, 'flip-v': 7, 'twist': 9, 'original': 10 };
             
             if (!currentTexture) { 
                 document.getElementById('status').textContent = 'Status: Upload image first'; 

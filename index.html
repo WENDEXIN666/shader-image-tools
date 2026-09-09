@@ -237,6 +237,26 @@
         .mobile-only { display: none; }
         .desktop-only { display: block; }
         
+        /* ========== 桌面端重新打开 Filter Guide 按钮 ========== */
+        .reopen-info {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 999;
+            background: rgba(30, 30, 50, 0.95);
+            color: white;
+            border: 1px solid #4CAF50;
+            padding: 10px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: background 0.2s ease;
+        }
+        .reopen-info:hover { background: rgba(76, 175, 80, 0.35); }
+        
         /* ========== ========== 平板适配 (768px - 1024px) ========== ========== */
         @media screen and (min-width: 768px) and (max-width: 1024px) {
             #canvas-container { height: 55vh; }
@@ -258,6 +278,11 @@
             /* 隐藏桌面端面板 */
             .info-panel, #status {
                 display: none;
+            }
+            
+            /* 移动端隐藏桌面端专用按钮（移动端用 ℹ️ 浮动按钮） */
+            .reopen-info {
+                display: none !important;
             }
             
             /* 显示移动端切换按钮 */
@@ -340,7 +365,7 @@
                 font-size: 12px;
                 padding: 10px;
                 text-align: center;
-                z-index: 100;
+                z-index: 1002; /* 必须高于遮罩层(1001)，否则会被遮罩盖住 */
             }
             
             /* 信息面板移动端样式 */
@@ -451,6 +476,9 @@
             <span id="toggle-status-icon">📋</span>
         </button>
         
+        <!-- 桌面端重新打开 Filter Guide 按钮（点击面板内 Close 后出现） -->
+        <button id="reopen-info-btn" class="reopen-info" onclick="reopenInfoPanel()">ℹ️ Filter Guide</button>
+        
         <!-- 移动端遮罩层 -->
         <div class="mobile-overlay" id="mobile-overlay" onclick="closeMobilePanels()"></div>
         
@@ -482,8 +510,8 @@
             <input type="file" id="file-input" accept="image/*" onchange="handleImageUpload(event)">
             <!-- 桌面端上传按钮 -->
             <button class="upload-btn desktop-only" onclick="document.getElementById('file-input').click()">Upload Image</button>
-            <!-- 移动端上传按钮（支持相机） -->
-            <button class="upload-btn mobile-only" onclick="document.getElementById('file-input-mobile').click()">📷 Upload/Camera</button>
+            <!-- 移动端上传按钮（点击后手机系统弹出"拍照/从相册选择"） -->
+            <button class="upload-btn mobile-only" onclick="document.getElementById('file-input-mobile').click()">📷 Upload Photo</button>
             
             <div class="filter-buttons">
                 <button onclick="applyFilter('grayscale')">Grayscale</button>
@@ -509,8 +537,8 @@
             <button class="save-btn" onclick="saveImage()">Save Image</button>
         </div>
         
-        <!-- 移动端隐藏的文件输入（支持相机） -->
-        <input type="file" id="file-input-mobile" accept="image/*" capture="environment" onchange="handleImageUpload(event)" style="display: none;">
+        <!-- 移动端隐藏的文件输入（不带 capture，手机会弹出"拍照/从相册选择"菜单） -->
+        <input type="file" id="file-input-mobile" accept="image/*" onchange="handleImageUpload(event)" style="display: none;">
     </div>
 
     <script>
@@ -888,7 +916,7 @@
             document.getElementById('sharpen-value-display').textContent = amount.toFixed(2);
         };
         
-        /* ========== 移动端面板切换功能 ========== */
+        /* ========== 移动端/桌面端面板切换功能 ========== */
         let mobilePanelOpen = null;
         
         function toggleMobilePanel(panel) {
@@ -907,6 +935,7 @@
                 
                 // 打开指定面板
                 if (panel === 'info') {
+                    infoPanel.style.display = ''; // 清除桌面端 Close 留下的内联隐藏
                     infoPanel.classList.add('mobile-visible');
                     overlay.classList.add('visible');
                 } else if (panel === 'status') {
@@ -933,6 +962,22 @@
             if (statusEl) statusEl.classList.remove('mobile-visible');
             overlay.classList.remove('visible');
             mobilePanelOpen = null;
+            
+            // 桌面端：点击 Close 真正收起面板，并显示"重新打开"按钮
+            const isMobileScreen = window.matchMedia('(max-width: 767px)').matches;
+            if (!isMobileScreen) {
+                infoPanel.style.display = 'none';
+                const reopenBtn = document.getElementById('reopen-info-btn');
+                if (reopenBtn) reopenBtn.style.display = 'block';
+            }
+        }
+        
+        // 桌面端：重新展开 Filter Guide 面板
+        function reopenInfoPanel() {
+            const infoPanel = document.getElementById('info-panel-mobile');
+            infoPanel.style.display = 'block';
+            const reopenBtn = document.getElementById('reopen-info-btn');
+            if (reopenBtn) reopenBtn.style.display = 'none';
         }
         
         /* ========== 同步桌面端状态到移动端 ========== */

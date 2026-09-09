@@ -731,18 +731,23 @@
                             gl_FragColor = center - laplacian * uSharpenAmount;
                         }
                         // Blur
-                        else if (uFilterType == 4) { 
-                            vec4 sum = vec4(0.0); 
-                            float blur = 0.008 + uBlurAmount * 0.015;
-                            float count = 0.0;
-                            for(float x = -3.0; x <= 3.0; x += 1.0) {
-                                for(float y = -3.0; y <= 3.0; y += 1.0) {
-                                    float weight = 1.0 - (abs(x) + abs(y)) * 0.1;
-                                    sum += texture2D(uTexture, uv + vec2(x, y) * blur) * weight;
-                                    count += weight;
+                        else if (uFilterType == 4) {
+                            if (uBlurAmount < 0.001) {
+                                // 滑块为 0 时无模糊，直接显示原图
+                                gl_FragColor = color;
+                            } else {
+                                vec4 sum = vec4(0.0);
+                                float blur = uBlurAmount * 0.023; // 范围 0 ~ 0.023，与原最大值一致
+                                float count = 0.0;
+                                for(float x = -3.0; x <= 3.0; x += 1.0) {
+                                    for(float y = -3.0; y <= 3.0; y += 1.0) {
+                                        float weight = 1.0 - (abs(x) + abs(y)) * 0.1;
+                                        sum += texture2D(uTexture, uv + vec2(x, y) * blur) * weight;
+                                        count += weight;
+                                    }
                                 }
+                                gl_FragColor = sum / count;
                             }
-                            gl_FragColor = sum / count;
                         }
                         // Enhanced Edge Detection
                         else if (uFilterType == 5) {

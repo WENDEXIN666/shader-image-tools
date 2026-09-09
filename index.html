@@ -513,7 +513,9 @@
 
     <script>
         let loadAttempt = 0;
+        // 加载顺序：本地文件优先（不依赖外网），CDN 仅作备用
         const cdnList = [
+            'lib/three.min.js',                                      // 本地文件（部署到 GitHub Pages 后生效）
             'https://unpkg.com/three@0.160.0/build/three.min.js',
             'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js'
@@ -596,16 +598,30 @@
         }
 
         function tryGitHubCDN() {
-            const url = 'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/build/three.min.js';
-            log('Trying jsdelivr CDN...');
-            const script = document.createElement('script');
-            script.src = url;
-            script.onload = () => {
-                log('SUCCESS via jsdelivr');
-                showApp();
-            };
-            script.onerror = () => showError('GitHub CDN also failed');
-            document.head.appendChild(script);
+            // 依次尝试更多备用源
+            const urls = [
+                'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js',
+                'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js'
+            ];
+            let i = 0;
+
+            function tryNext() {
+                if (i >= urls.length) {
+                    showError('All CDN sources failed');
+                    return;
+                }
+                const url = urls[i++];
+                log('Trying fallback CDN: ' + url.split('/')[2]);
+                const script = document.createElement('script');
+                script.src = url;
+                script.onload = () => {
+                    log('SUCCESS via ' + url.split('/')[2]);
+                    showApp();
+                };
+                script.onerror = () => tryNext();
+                document.head.appendChild(script);
+            }
+            tryNext();
         }
 
         // Global variables for the app

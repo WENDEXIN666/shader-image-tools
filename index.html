@@ -469,6 +469,8 @@
         
         <!-- 状态栏 -->
         <div id="status-mobile" class="mobile-only">Status: Ready</div>
+        <!-- 桌面端状态栏（移动端通过 CSS 隐藏，JS 通过 id="status" 更新文字） -->
+        <div id="status">Status: Ready</div>
         
         <!-- Canvas 区域 -->
         <div id="canvas-container">
@@ -565,11 +567,12 @@
             }
             
             const url = cdnList[index];
-            log('Trying CDN ' + (index + 1) + ': ' + url.split('/')[2]);
-            
+            const sourceName = url.split('/')[2] || 'local file (lib/three.min.js)';
+            log('Trying CDN ' + (index + 1) + ': ' + sourceName);
+
             try {
                 await loadCDN(url, 15000);
-                log('SUCCESS: Loaded from ' + url.split('/')[2]);
+                log('SUCCESS: Loaded from ' + sourceName);
                 return true;
             } catch (e) {
                 log('Failed: ' + e.message);

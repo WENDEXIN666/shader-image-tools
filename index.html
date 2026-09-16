@@ -114,6 +114,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            z-index: 1500; /* 必须高于 #controls(auto)，否则面板底部按钮会被底部控制栏盖住而无法点击 */
         }
         .info-panel h3 { color: #4CAF50; margin-bottom: 10px; }
         .info-panel p { margin: 5px 0; color: #ccc; }
@@ -131,6 +132,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            z-index: 1500; /* 与 info-panel 同层 */
         }
         
         /* ========== 控制面板 - 桌面端 ========== */
@@ -151,6 +153,7 @@
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
             box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            z-index: 1200; /* 低于 info-panel(1500) 和 #status(1500)，避免视口较矮时盖住面板底部按钮 */
         }
         
         /* ========== 按钮基础样式 ========== */
@@ -246,7 +249,7 @@
             position: fixed;
             top: 20px;
             left: 20px;
-            z-index: 999;
+            z-index: 1600; /* 高于 info-panel(1500)，确保收起面板后按钮可点 */
             background: rgba(30, 30, 50, 0.95);
             color: white;
             border: 1px solid #4CAF50;
@@ -265,7 +268,7 @@
             position: fixed;
             top: 80px;
             right: 20px;
-            z-index: 999;
+            z-index: 1600; /* 高于 info-panel/status(1500)，保证任何情况下可点 */
             width: 42px;
             height: 42px;
             border-radius: 50%;
@@ -532,7 +535,7 @@
                 font-size: 12px;
                 padding: 10px;
                 text-align: center;
-                z-index: 1002; /* 必须高于遮罩层(1001)，否则会被遮罩盖住 */
+                z-index: 2100; /* 高于遮罩层(2000)，否则会被遮罩盖住 */
             }
             
             /* 信息面板移动端样式 */
@@ -544,7 +547,7 @@
                 transform: translate(-50%, -50%);
                 max-width: 90vw;
                 width: 300px;
-                z-index: 1002;
+                z-index: 2100; /* 与状态面板同层，高于遮罩 */
                 padding: 20px;
             }
             
@@ -557,7 +560,7 @@
                 right: 0;
                 bottom: 0;
                 background: rgba(0,0,0,0.7);
-                z-index: 1001;
+                z-index: 2000; /* 遮罩层：低于面板(2100)/弹窗(3000) */
             }
             .mobile-overlay.visible { display: block; }
         }
@@ -662,8 +665,8 @@
             <p><span class="dot" style="background:#A5D6A7"></span><strong>Flip H/V:</strong> Mirror image</p>
             <p><span class="dot" style="background:#CE93D8"></span><strong>Twist:</strong> Distortion effect</p>
             <p><span class="dot" style="background:#FF8A65"></span><strong>Reset:</strong> Restore original</p>
-            <button onclick="toggleHelpModal()" style="margin-top: 12px; width: 100%; padding: 10px; background: linear-gradient(135deg, #00BCD4, #0097A7); border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 13px;">📖 Full Help & Algorithms</button>
-            <button onclick="closeMobilePanels()" style="margin-top: 8px; width: 100%; padding: 10px; background: #555; border: none; border-radius: 5px; color: white; cursor: pointer;">Close</button>
+            <button id="panel-help-btn" style="margin-top: 12px; width: 100%; padding: 10px; background: linear-gradient(135deg, #00BCD4, #0097A7); border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 13px;">📖 Full Help & Algorithms</button>
+            <button id="panel-close-btn" style="margin-top: 8px; width: 100%; padding: 10px; background: #555; border: none; border-radius: 5px; color: white; cursor: pointer;">Close</button>
         </div>
         
         <!-- 状态栏 -->
@@ -1323,6 +1326,30 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') closeHelpModal();
         });
+        
+        /* ========== Filter Guide 面板内按钮绑定（显式绑定，双保险） ========== */
+        (function bindPanelButtons() {
+            const helpBtn = document.getElementById('panel-help-btn');
+            const closeBtn = document.getElementById('panel-close-btn');
+            if (helpBtn) {
+                helpBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    console.log('[Panel] Full Help clicked');
+                    toggleHelpModal();
+                });
+            } else {
+                console.error('[Panel] #panel-help-btn NOT found');
+            }
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    console.log('[Panel] Close clicked');
+                    closeMobilePanels();
+                });
+            } else {
+                console.error('[Panel] #panel-close-btn NOT found');
+            }
+        })();
         
         /* ========== 屏幕旋转处理 ========== */
         window.addEventListener('orientationchange', function() {

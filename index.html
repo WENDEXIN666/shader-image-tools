@@ -13,6 +13,8 @@
             min-height: 100vh;
             color: #fff;
             overflow-x: hidden;
+            /* 禁用双击缩放（替代旧的 touchend preventDefault hack，不会吞掉单击） */
+            touch-action: manipulation;
         }
         
         /* ========== 移动端安全区域适配 ========== */
@@ -1323,15 +1325,9 @@
         });
         
         /* ========== 移动端触摸手势支持 ========== */
-        // 防止双击缩放
-        document.addEventListener('touchend', function(e) {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) {
-                e.preventDefault();
-            }
-            lastTouchEnd = now;
-        }, false);
-        let lastTouchEnd = 0;
+        // 双击缩放已通过 CSS body { touch-action: manipulation } 禁用。
+        // 注意：不要用 touchend + preventDefault 来防双击缩放——它会吞掉
+        // 300ms 内的第二次点击，导致快速连续点按钮时 onclick 失效。
         
         init();
     </script>

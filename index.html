@@ -1281,15 +1281,42 @@
             }
         }
         
-        /* ========== 帮助弹窗 ========== */
+        /* ========== 帮助弹窗（带诊断日志） ========== */
         function toggleHelpModal() {
-            closeMobilePanels(); // 避免和移动端面板叠加
+            try {
+                console.log('[Help] toggle requested');
+                closeMobilePanels(); // 避免和移动端面板叠加
+                const overlay = document.getElementById('help-overlay');
+                if (!overlay) {
+                    console.error('[Help] #help-overlay element NOT found in DOM');
+                    return;
+                }
+                const willOpen = !overlay.classList.contains('visible');
+                if (willOpen) {
+                    overlay.classList.add('visible');
+                } else {
+                    overlay.classList.remove('visible');
+                }
+                console.log('[Help] modal is now:', willOpen ? 'OPEN' : 'CLOSED',
+                            '| display =', getComputedStyle(overlay).display);
+            } catch (err) {
+                console.error('[Help] toggle failed:', err);
+            }
+        }
+        
+        function openHelpModal() {
             const overlay = document.getElementById('help-overlay');
-            overlay.classList.toggle('visible');
+            if (overlay) overlay.classList.add('visible');
         }
         
         function closeHelpModal() {
-            document.getElementById('help-overlay').classList.remove('visible');
+            try {
+                const overlay = document.getElementById('help-overlay');
+                if (overlay) overlay.classList.remove('visible');
+                console.log('[Help] modal closed');
+            } catch (err) {
+                console.error('[Help] close failed:', err);
+            }
         }
         
         // ESC 键关闭帮助弹窗

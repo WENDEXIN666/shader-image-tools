@@ -1282,6 +1282,7 @@
         }
         
         /* ========== 帮助弹窗（带诊断日志） ========== */
+        // 显隐用 inline style 直接控制（优先级最高，不受任何 CSS 规则干扰）
         function toggleHelpModal() {
             try {
                 console.log('[Help] toggle requested');
@@ -1291,14 +1292,13 @@
                     console.error('[Help] #help-overlay element NOT found in DOM');
                     return;
                 }
-                const willOpen = !overlay.classList.contains('visible');
-                if (willOpen) {
-                    overlay.classList.add('visible');
-                } else {
-                    overlay.classList.remove('visible');
-                }
-                console.log('[Help] modal is now:', willOpen ? 'OPEN' : 'CLOSED',
-                            '| display =', getComputedStyle(overlay).display);
+                const currentlyHidden = getComputedStyle(overlay).display === 'none';
+                overlay.style.display = currentlyHidden ? 'flex' : 'none';
+                const rect = overlay.getBoundingClientRect();
+                console.log('[Help] modal is now:', currentlyHidden ? 'OPEN' : 'CLOSED',
+                            '| computed display =', getComputedStyle(overlay).display,
+                            '| rect =', Math.round(rect.x) + ',' + Math.round(rect.y),
+                            Math.round(rect.width) + 'x' + Math.round(rect.height));
             } catch (err) {
                 console.error('[Help] toggle failed:', err);
             }
@@ -1306,13 +1306,13 @@
         
         function openHelpModal() {
             const overlay = document.getElementById('help-overlay');
-            if (overlay) overlay.classList.add('visible');
+            if (overlay) overlay.style.display = 'flex';
         }
         
         function closeHelpModal() {
             try {
                 const overlay = document.getElementById('help-overlay');
-                if (overlay) overlay.classList.remove('visible');
+                if (overlay) overlay.style.display = 'none';
                 console.log('[Help] modal closed');
             } catch (err) {
                 console.error('[Help] close failed:', err);

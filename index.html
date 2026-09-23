@@ -705,14 +705,30 @@
                 <button onclick="applyFilter('original')" title="Restore the original image" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);">Reset</button>
             </div>
             
-            <div class="slider-container">
+            <!-- 参数滑块：点击对应滤镜时才显示（由 showSliderFor 控制） -->
+            <div class="slider-container param-slider" id="slider-blur" style="display: none;">
                 <label title="Controls the blur strength — 0 means no blur">Blur: <span id="blur-value-display">0.5</span></label>
                 <input type="range" id="blur-slider" min="0" max="100" value="50" oninput="updateBlurAmount(this.value)" title="Controls the blur strength — 0 means no blur" aria-label="Blur strength">
             </div>
             
-            <div class="slider-container">
+            <div class="slider-container param-slider" id="slider-sharpen" style="display: none;">
                 <label title="Controls the sharpen strength — 0 means no sharpening">Sharpen: <span id="sharpen-value-display">1.5</span></label>
                 <input type="range" id="sharpen-slider" min="0" max="300" value="150" oninput="updateSharpenAmount(this.value)" title="Controls the sharpen strength — 0 means no sharpening" aria-label="Sharpen strength">
+            </div>
+            
+            <div class="slider-container param-slider" id="slider-grayscale" style="display: none;">
+                <label title="0 keeps the original colors, 1 is fully black & white">Grayscale: <span id="grayscale-value-display">1.00</span></label>
+                <input type="range" id="grayscale-slider" min="0" max="100" value="100" oninput="updateGrayscaleAmount(this.value)" title="0 keeps the original colors, 1 is fully black & white" aria-label="Grayscale strength">
+            </div>
+            
+            <div class="slider-container param-slider" id="slider-edge" style="display: none;">
+                <label title="Edge visibility — 0 hides edges, 1 boosts them">Edge: <span id="edge-value-display">0.50</span></label>
+                <input type="range" id="edge-slider" min="0" max="100" value="50" oninput="updateEdgeAmount(this.value)" title="Edge visibility — 0 hides edges, 1 boosts them" aria-label="Edge strength">
+            </div>
+            
+            <div class="slider-container param-slider" id="slider-twist" style="display: none;">
+                <label title="Spiral distortion strength — 0 means no twist">Twist: <span id="twist-value-display">0.50</span></label>
+                <input type="range" id="twist-slider" min="0" max="100" value="50" oninput="updateTwistAmount(this.value)" title="Spiral distortion strength — 0 means no twist" aria-label="Twist strength">
             </div>
             
             <button class="save-btn" onclick="saveImage()" title="Download the current image as PNG">Save Image</button>
@@ -778,6 +794,10 @@
                 <h3>🎛️ Parameters</h3>
                 <table class="filter-theory">
                     <tr>
+                        <td>Grayscale slider</td>
+                        <td>Color-to-gray blend. <strong>0 = original colors</strong>, 1 = fully black &amp; white.</td>
+                    </tr>
+                    <tr>
                         <td>Blur slider</td>
                         <td>Convolution sampling radius. <strong>0 = original image</strong> (no blur).</td>
                     </tr>
@@ -785,7 +805,18 @@
                         <td>Sharpen slider</td>
                         <td>Laplacian amplification factor. <strong>0 = original image</strong>.</td>
                     </tr>
+                    <tr>
+                        <td>Edge slider</td>
+                        <td>Edge visibility. <strong>0 = no edges</strong>, 0.5 = standard detection, 1 = boosted edges.</td>
+                    </tr>
+                    <tr>
+                        <td>Twist slider</td>
+                        <td>Spiral distortion strength. <strong>0 = no twist</strong>, 0.5 = standard spiral, 1 = strong warp.</td>
+                    </tr>
                 </table>
+                <div class="tip-box">
+                    <p>💡 Only the slider of the <strong>currently selected filter</strong> is shown — pick a filter first, then adjust its slider.</p>
+                </div>
 
                 <div class="tip-box">
                     <p>💡 <strong>Tips</strong></p>
@@ -940,6 +971,9 @@
                 uFilterType: { value: 0 }, 
                 uBlurAmount: { value: 0.5 },
                 uSharpenAmount: { value: 1.5 },
+                uGrayscaleAmount: { value: 1.0 },
+                uEdgeAmount: { value: 0.5 },
+                uTwistAmount: { value: 0.5 },
                 uResolution: { value: new THREE.Vector2(800, 600) }
             };
 
@@ -957,6 +991,9 @@
                     uniform int uFilterType;
                     uniform float uBlurAmount;
                     uniform float uSharpenAmount;
+                    uniform float uGrayscaleAmount;
+                    uniform float uEdgeAmount;
+                    uniform float uTwistAmount;
                     uniform vec2 uResolution;
                     varying vec2 vUv;
 
@@ -972,7 +1009,7 @@
                         // Grayscale
                         if (uFilterType == 1) { 
                             float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114)); 
-                            gl_FragColor = vec4(gray, gray, gray, 1.0); 
+                            gl_FragColor = vec4(mix(color.rgb, vec3(gray), uGrayscaleAmount), color.a); 
                         }
                         // Sharpen (Edge enhancement)
                         else if (uFilterType == 2) { 
@@ -1019,9 +1056,9 @@
                             vec4 edge = sqrt(horizontal * horizontal + vertical * vertical);
                             
                             float edgeStrength = (edge.r + edge.g + edge.b) / 3.0;
-                            edgeStrength = smoothstep(0.05, 0.3, edgeStrength);
+                            edgeStrength = smoothstep(0.05, 0.3, edgeStrength) * uEdgeAmount * 2.0;
                             
-                            gl_FragColor = vec4(vec3(edgeStrength), 1.0);
+                            gl_FragColor = vec4(vec3(clamp(edgeStrength, 0.0, 1.0)), 1.0);
                         }
                         // Flip Horizontal
                         else if (uFilterType == 6) { 
@@ -1035,7 +1072,7 @@
                         else if (uFilterType == 9) {
                             vec2 centered = uv - 0.5;
                             float dist = length(centered);
-                            float angle = dist * 8.0;
+                            float angle = dist * uTwistAmount * 16.0;
                             float s = sin(angle);
                             float c = cos(angle);
                             vec2 twisted = vec2(
@@ -1124,6 +1161,7 @@
                     
                     uniforms.uTexture.value = texture;
                     uniforms.uFilterType.value = 1;
+                    showSliderFor('grayscale'); // 上传后默认应用灰度滤镜，显示对应滑块
                     
                     // 上传成功后隐藏空状态引导
                     const emptyHint = document.getElementById('empty-hint');
@@ -1141,16 +1179,19 @@
             
             if (!currentTexture) { 
                 document.getElementById('status').textContent = 'Status: Upload image first'; 
+                syncStatusToMobile();
                 return; 
             }
             
             if (map[filterType]) { 
                 uniforms.uFilterType.value = map[filterType]; 
+                showSliderFor(filterType); // 只显示当前滤镜对应的参数滑块
                 if (filterType === 'original') {
                     document.getElementById('status').textContent = 'Status: Original image restored';
                 } else {
                     document.getElementById('status').textContent = 'Filter: ' + filterType; 
                 }
+                syncStatusToMobile();
             }
         };
 
@@ -1180,6 +1221,46 @@
             uniforms.uSharpenAmount.value = amount;
             document.getElementById('sharpen-value-display').textContent = amount.toFixed(2);
         };
+
+        window.updateGrayscaleAmount = function(value) {
+            const amount = value / 100;
+            uniforms.uGrayscaleAmount.value = amount;
+            document.getElementById('grayscale-value-display').textContent = amount.toFixed(2);
+        };
+
+        window.updateEdgeAmount = function(value) {
+            const amount = value / 100;
+            uniforms.uEdgeAmount.value = amount;
+            document.getElementById('edge-value-display').textContent = amount.toFixed(2);
+        };
+
+        window.updateTwistAmount = function(value) {
+            const amount = value / 100;
+            uniforms.uTwistAmount.value = amount;
+            document.getElementById('twist-value-display').textContent = amount.toFixed(2);
+        };
+        
+        /* ========== 滑块显示逻辑：只显示当前滤镜对应的滑块 ========== */
+        const SLIDER_FOR_FILTER = {
+            'grayscale': 'slider-grayscale',
+            'sharpen':   'slider-sharpen',
+            'blur':      'slider-blur',
+            'edge':      'slider-edge',
+            'twist':     'slider-twist'
+        };
+        
+        function showSliderFor(filterType) {
+            // 先隐藏全部参数滑块
+            document.querySelectorAll('.param-slider').forEach(function(el) {
+                el.style.display = 'none';
+            });
+            const sliderId = SLIDER_FOR_FILTER[filterType];
+            if (sliderId) {
+                const el = document.getElementById(sliderId);
+                if (el) el.style.display = 'flex';
+            }
+            // 无参数的滤镜（flip-h / flip-v / original）不显示任何滑块
+        }
         
         /* ========== 移动端/桌面端面板切换功能 ========== */
         let mobilePanelOpen = null;

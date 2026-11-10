@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Shader Image Tools</title>
     <style>
         /* ========== 基础样式 ========== */
@@ -230,14 +230,16 @@
             padding: 12px 16px;
             border-radius: 25px;
             font-size: 14px;
+            min-height: 44px;
+            min-width: 44px;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
         .mobile-toggle:active { transform: scale(0.95); }
-        .toggle-info { top: 20px; right: 20px; }
-        .toggle-status { top: 70px; right: 20px; background: linear-gradient(135deg, #FF9800, #F57C00); }
+        .toggle-info { top: 20px; top: calc(20px + env(safe-area-inset-top)); right: 20px; right: calc(20px + env(safe-area-inset-right)); }
+        .toggle-status { top: 70px; top: calc(70px + env(safe-area-inset-top)); right: 20px; right: calc(20px + env(safe-area-inset-right)); background: linear-gradient(135deg, #FF9800, #F57C00); }
         
         /* ========== 桌面端隐藏元素 ========== */
         .mobile-only { display: none; }
@@ -267,7 +269,9 @@
         .help-fab {
             position: fixed;
             top: 80px;
+            top: calc(80px + env(safe-area-inset-top));
             right: 20px;
+            right: calc(20px + env(safe-area-inset-right));
             z-index: 1600; /* 高于 info-panel/status(1500)，保证任何情况下可点 */
             width: 42px;
             height: 42px;
@@ -417,7 +421,13 @@
         @media screen and (max-width: 767px) {
             .help-fab {
                 top: 120px;
+                top: calc(120px + env(safe-area-inset-top));
                 right: 20px;
+                right: calc(20px + env(safe-area-inset-right));
+                width: 44px;
+                height: 44px;
+            }
+            .help-close {
                 width: 44px;
                 height: 44px;
             }
@@ -471,6 +481,12 @@
                 max-width: 100%;
                 border-radius: 20px 20px 0 0;
                 padding: 15px;
+                padding-left: 15px;
+                padding-left: calc(15px + env(safe-area-inset-left));
+                padding-right: 15px;
+                padding-right: calc(15px + env(safe-area-inset-right));
+                padding-bottom: 15px;
+                padding-bottom: calc(15px + env(safe-area-inset-bottom));
                 gap: 10px;
                 max-height: 55vh;
                 overflow-y: auto;
@@ -530,7 +546,9 @@
                 top: auto;
                 bottom: calc(55vh + 10px);
                 left: 10px;
+                left: calc(10px + env(safe-area-inset-left));
                 right: 10px;
+                right: calc(10px + env(safe-area-inset-right));
                 max-width: none;
                 font-size: 12px;
                 padding: 10px;
@@ -1109,8 +1127,26 @@
             const container = document.getElementById('canvas-container');
             const containerWidth = container.clientWidth - 30;
             const containerHeight = container.clientHeight - 30;
-            renderer.setSize(containerWidth, containerHeight);
-            uniforms.uResolution.value.set(containerWidth, containerHeight);
+
+            if (currentTexture && originalImageWidth && originalImageHeight) {
+                const imageAspect = originalImageWidth / originalImageHeight;
+                const containerAspect = containerWidth / containerHeight;
+
+                let displayWidth, displayHeight;
+                if (imageAspect > containerAspect) {
+                    displayWidth = containerWidth;
+                    displayHeight = containerWidth / imageAspect;
+                } else {
+                    displayHeight = containerHeight;
+                    displayWidth = containerHeight * imageAspect;
+                }
+
+                renderer.setSize(displayWidth, displayHeight);
+                uniforms.uResolution.value.set(displayWidth, displayHeight);
+            } else {
+                renderer.setSize(containerWidth, containerHeight);
+                uniforms.uResolution.value.set(containerWidth, containerHeight);
+            }
         }
 
         window.handleImageUpload = function(event) {
